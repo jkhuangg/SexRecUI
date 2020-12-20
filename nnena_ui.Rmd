@@ -1,0 +1,180 @@
+---
+title: "nnena_ui"
+author: "Jake Huang"
+date: "12/20/2020"
+output: html_document
+runtime: shiny
+---
+
+```{r context='setup',include=FALSE, cache=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+library(tibble)
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+library(stringr)
+library(shiny)
+#library(jsonlite)
+library(RColorBrewer)
+library(h2o)
+```
+
+
+```{r tx_input}
+wellPanel(style = "background: #FFF;",
+          h4('Please enter the following information.'),
+          flowLayout(
+            numericInput('tx_age','Age',min=45,max=85,step=1,value = 66),
+            numericInput('tx_psa','PSA (ng/mL)',value=6,min=0,step=1),
+            numericInput('tx_bmi', 'BMI', value=0, min=0, step=1),
+            numericInput('tx_glandvol', 'Glandvol', min=0, max=200, step=1, value=50),
+            selectInput('tx_dycat', 'Dynamic Category',
+                        c("none_of_the_above",
+                          "baseline",
+                          "mo3",
+                          "mo6",
+                          "baseline|mo3",
+                          "baseline|mo6",
+                          "mo3|mo6",
+                          "baseline|mo3|mo6",
+                          "mo12",
+                          "baseline|mo12",
+                          "mo3|mo12",
+                          "mo6|mo12",
+                          "baseline|mo3|mo12",
+                          "baseline|mo6|mo12",
+                          "mo3|mo6|mo12",
+                          "baseline|mo3|mo6|mo12"),
+                          selected='none_of_the_above'),
+            selectInput('tx_outcome_time', "Outcome Time",
+                        c('mo12',
+                          'mo24'),
+                        selected='mo12'),
+            selectInput('tx_bxgs_1','Primary Gleason score',
+                        c('Less than or equal to 3'=3,
+                          '4'=4,
+                          '5'=5),
+                        selected=3),
+            selectInput('tx_bxgs_2','Secondary Gleason score',
+                        c('Less than or equal to 3'=3,
+                          '4'=4,
+                          '5'=5),
+                        selected=3),
+            selectInput('tx_diab','Do you have diabetes?',
+                        choices=c('Yes','No'),selected='No'),
+            selectInput('tx_baseline_ss', 'Baseline Sexual Satisfaction',
+                        c(NA,'1'=1,'2'=2,'3'=3,'4'=4,'5'=5),
+                        selected=NA),
+            numericInput('tx_baseline_sds', 'Baseline Sexual Domain Score',
+                         min=0, max=500, value=NA),
+            selectInput('tx_mo3_ss', 'Month 3 Sexual Satisfaction',
+                        c(NA,'1'=1,'2'=2,'3'=3,'4'=4,'5'=5),
+                        selected=NA),
+            numericInput('tx_mo3_sds', 'Month 3 Sexual Domain Score',
+                         min=0, max=500, value=NA),
+            selectInput('tx_mo6_ss', 'Month 6 Sexual Satisfaction',
+                        c(NA,'1'=1,'2'=2,'3'=3,'4'=4,'5'=5),
+                        selected=NA),
+            numericInput('tx_mo6_sds', 'Month 6 Sexual Domain Score',
+                         min=0, max=500, value=NA),
+            selectInput('tx_mo12_ss', 'Month 12 Sexual Satisfaction',
+                        c(NA,'1'=1,'2'=2,'3'=3,'4'=4,'5'=5),
+                        selected=NA),
+            numericInput('tx_mo12_sds', 'Month 12 Sexual Domain Score',
+                         min=0, max=500, value=NA),
+            numericInput('tx_epic_ss', 'Epic Sexual Domain Score',
+                         min=0, max=500, value=NA)
+      ),
+      br(),
+      actionButton('tx_start','Calculate')
+)
+
+```
+
+```{r tx_output}
+
+conditionalPanel('input.tx_start>0',
+                 wellPanel(id='tx_results',style = "background: #FFF;",
+                   h3('Score: '),
+                   h5(htmlOutput('pred_score'))
+                   ))
+        
+
+####
+```
+
+
+```{r tx_prediction}
+
+ggfind = reactive({
+  b1 = as.integer(input$tx_bxgs_1)
+  b2 = as.integer(input$tx_bxgs_2)
+  if ((b1 + b2) == 6) {
+    gg = 'GG1'
+  } else if (b1 == 3 & b2 == 4) {
+    gg = 'GG2'
+  } else if (b1 == 4 & b2 == 3) {
+    gg = 'GG3'
+  } else if ((b1 + b2) == 8) {
+    gg = 'GG4'
+  } else if ((b1 + b2) >= 9){
+    gg = 'GG5'
+  }
+  gg
+})
+
+prediction_score <- reactive({
+  
+  age=as.integer(input$tx_age)
+  bmi=as.integer(input$tx_bmi)
+  diabetes = ifelse(input$tx_diab=='Yes', 1, 0)
+  glandvol = as.integer(input$tx_glandvol)
+  psa = as.integer(input$tx_psa)
+  gleason_grade = ggfind()
+  dynamic_category = input$tx_dycat
+  outcome_time = input$tx_outcome_time
+  baseline_sexual_satisfaction = as.integer(input$tx_baseline_ss)
+  baseline_epic_sexualdomainscore = as.integer(input$tx_baseline_sds)
+  mo3_sexual_satisfaction= as.integer(input$tx_mo3_ss)
+  mo3_epic_sexualdomainscore = as.integer(input$tx_mo3_sds)
+  mo6_sexual_satisfaction = as.integer(input$tx_mo6_ss)
+  mo6_epic_sexualdomainscore = as.integer(input$tx_mo6_sds)
+  mo12_sexual_satisfaction=as.integer(input$tx_mo12_ss)
+  mo12_epic_sexualdomainscore=as.integer(input$tx_mo12_sds)
+  epic_sexualdomainscore=as.integer(input$tx_epic_ss)
+  
+  x = data.frame(age,
+                 bmi,
+                 diabetes,
+                 glandvol,
+                 psa,
+                 gleason_grade,
+                 dynamic_category,
+                 outcome_time,
+                 baseline_sexual_satisfaction,
+                 baseline_epic_sexualdomainscore,
+                 mo3_sexual_satisfaction,
+                 mo3_epic_sexualdomainscore,
+                 mo6_sexual_satisfaction,
+                 mo6_epic_sexualdomainscore,
+                 mo12_sexual_satisfaction,
+                 mo12_epic_sexualdomainscore,
+                 epic_sexualdomainscore)
+  
+  pred_isof <- h2o.mojo_predict_df(frame=x, 
+                                   mojo_zip_path='h2o_rf_epic_sexualdomainscore.zip',
+                                   genmodel_jar_path='h2o-genmodel.jar',
+                                   verbose = F)
+  score = as.vector(pred_isof$predict)
+  score
+})
+
+output$pred_score = renderText({
+  result = prediction_score()
+  paste(result)
+})
+
+
+
+```
+      
