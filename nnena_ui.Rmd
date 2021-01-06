@@ -17,6 +17,7 @@ library(shiny)
 #library(jsonlite)
 library(RColorBrewer)
 library(h2o)
+library(glue)
 ```
 
 
@@ -28,28 +29,28 @@ wellPanel(style = "background: #FFF;",
             numericInput('tx_psa','PSA (ng/mL)',value=6,min=0,step=1),
             numericInput('tx_bmi', 'BMI', value=0, min=0, step=1),
             numericInput('tx_glandvol', 'Glandvol', min=0, max=200, step=1, value=50),
-            selectInput('tx_dycat', 'Dynamic Category',
-                        c("none_of_the_above",
-                          "baseline",
-                          "mo3",
-                          "mo6",
-                          "baseline|mo3",
-                          "baseline|mo6",
-                          "mo3|mo6",
-                          "baseline|mo3|mo6",
-                          "mo12",
-                          "baseline|mo12",
-                          "mo3|mo12",
-                          "mo6|mo12",
-                          "baseline|mo3|mo12",
-                          "baseline|mo6|mo12",
-                          "mo3|mo6|mo12",
-                          "baseline|mo3|mo6|mo12"),
-                          selected='none_of_the_above'),
-            selectInput('tx_outcome_time', "Outcome Time",
-                        c('mo12',
-                          'mo24'),
-                        selected='mo12'),
+            # selectInput('tx_dycat', 'Dynamic Category',
+            #             c("none_of_the_above",
+            #               "baseline",
+            #               "mo3",
+            #               "mo6",
+            #               "baseline|mo3",
+            #               "baseline|mo6",
+            #               "mo3|mo6",
+            #               "baseline|mo3|mo6",
+            #               "mo12",
+            #               "baseline|mo12",
+            #               "mo3|mo12",
+            #               "mo6|mo12",
+            #               "baseline|mo3|mo12",
+            #               "baseline|mo6|mo12",
+            #               "mo3|mo6|mo12",
+            #               "baseline|mo3|mo6|mo12"),
+            #               selected='none_of_the_above'),
+            # selectInput('tx_outcome_time', "Outcome Time",
+            #             c('mo12',
+            #               'mo24'),
+            #             selected='mo12'),
             selectInput('tx_bxgs_1','Primary Gleason score',
                         c('Less than or equal to 3'=3,
                           '4'=4,
@@ -62,28 +63,34 @@ wellPanel(style = "background: #FFF;",
                         selected=3),
             selectInput('tx_diab','Do you have diabetes?',
                         choices=c('Yes','No'),selected='No'),
-            selectInput('tx_baseline_ss', 'Baseline Sexual Satisfaction',
-                        c(NA,'1'=1,'2'=2,'3'=3,'4'=4,'5'=5),
-                        selected=NA),
-            numericInput('tx_baseline_sds', 'Baseline Sexual Domain Score',
-                         min=0, max=500, value=NA),
-            selectInput('tx_mo3_ss', 'Month 3 Sexual Satisfaction',
-                        c(NA,'1'=1,'2'=2,'3'=3,'4'=4,'5'=5),
-                        selected=NA),
-            numericInput('tx_mo3_sds', 'Month 3 Sexual Domain Score',
-                         min=0, max=500, value=NA),
-            selectInput('tx_mo6_ss', 'Month 6 Sexual Satisfaction',
-                        c(NA,'1'=1,'2'=2,'3'=3,'4'=4,'5'=5),
-                        selected=NA),
-            numericInput('tx_mo6_sds', 'Month 6 Sexual Domain Score',
-                         min=0, max=500, value=NA),
-            selectInput('tx_mo12_ss', 'Month 12 Sexual Satisfaction',
-                        c(NA,'1'=1,'2'=2,'3'=3,'4'=4,'5'=5),
-                        selected=NA),
-            numericInput('tx_mo12_sds', 'Month 12 Sexual Domain Score',
-                         min=0, max=500, value=NA),
-            numericInput('tx_epic_ss', 'Epic Sexual Domain Score',
-                         min=0, max=500, value=NA)
+            # selectInput('tx_baseline_ss', 'Baseline Sexual Satisfaction',
+            #             c(NA,'1'=1,'2'=2,'3'=3,'4'=4,'5'=5),
+            #             selected=NA),
+            # numericInput('tx_baseline_sds', 'Baseline Sexual Domain Score',
+            #              min=0, max=500, value=NA),
+            # selectInput('tx_mo3_ss', 'Month 3 Sexual Satisfaction',
+            #             c(NA,'1'=1,'2'=2,'3'=3,'4'=4,'5'=5),
+            #             selected=NA),
+            # numericInput('tx_mo3_sds', 'Month 3 Sexual Domain Score',
+            #              min=0, max=500, value=NA),
+            # selectInput('tx_mo6_ss', 'Month 6 Sexual Satisfaction',
+            #             c(NA,'1'=1,'2'=2,'3'=3,'4'=4,'5'=5),
+            #             selected=NA),
+            # numericInput('tx_mo6_sds', 'Month 6 Sexual Domain Score',
+            #              min=0, max=500, value=NA),
+            # selectInput('tx_mo12_ss', 'Month 12 Sexual Satisfaction',
+            #             c(NA,'1'=1,'2'=2,'3'=3,'4'=4,'5'=5),
+            #             selected=NA),
+            # numericInput('tx_mo12_sds', 'Month 12 Sexual Domain Score',
+            #              min=0, max=500, value=NA),
+            # numericInput('tx_epic_ss', 'Epic Sexual Domain Score',
+            #              min=0, max=500, value=NA),
+            checkboxGroupInput("tx_gdycat", "Dynamic Category",
+                               c("Baseline" = "baseline",
+                                 "Month 3"  = "mo3",
+                                 "Month 6"  = "mo6",
+                                 "Month 12" = "mo12"
+                                 ))
       ),
       br(),
       actionButton('tx_start','Calculate')
@@ -95,10 +102,51 @@ wellPanel(style = "background: #FFF;",
 
 conditionalPanel('input.tx_start>0',
                  wellPanel(id='tx_results',style = "background: #FFF;",
-                   h3('Score: '),
-                   h5(htmlOutput('pred_score'))
+                   h3('Month 12 Epic Sexual Domain Score: '),
+                   h5(htmlOutput('mo12_sds')),
+                   h3('Month 12 Erection Quality Score: '),
+                   h5(htmlOutput('mo12_eqs')),
+                   h3('Month 24 Epic Sexual Domain Score: '),
+                   h5(htmlOutput('mo24_sds')),
+                   h3('Month 24 Erection Quality Score: '),
+                   h5(htmlOutput('mo24_eqs'))
                    ))
-        
+
+# BASELINE
+conditionalPanel(
+  condition = "input.tx_gdycat.includes(\"baseline\")",
+  selectInput('tx_baseline_ss', 'Baseline Sexual Satisfaction',
+              c(NA,'1'=1,'2'=2,'3'=3,'4'=4,'5'=5), selected=NA),
+  numericInput('tx_baseline_sds', 'Baseline Sexual Domain Score',
+               min=0, max=100, value=NA)
+)
+
+# MONTH 3
+conditionalPanel(
+  condition = "input.tx_gdycat.includes(\"mo3\")",
+  selectInput('tx_mo3_ss', 'Month 3 Sexual Satisfaction',
+              c(NA,'1'=1,'2'=2,'3'=3,'4'=4,'5'=5), selected=NA),
+  numericInput('tx_mo3_sds', 'Month 3 Sexual Domain Score',
+               min=0, max=100, value=NA)
+)
+
+# MONTH 6
+conditionalPanel(
+  condition = "input.tx_gdycat.includes(\"mo6\")",
+  selectInput('tx_mo6_ss', 'Month 6 Sexual Satisfaction',
+              c(NA,'1'=1,'2'=2,'3'=3,'4'=4,'5'=5), selected=NA),
+  numericInput('tx_mo6_sds', 'Month 6 Sexual Domain Score',
+               min=0, max=100, value=NA)
+)
+
+# MONTH 12
+conditionalPanel(
+  condition = "input.tx_gdycat.includes(\"mo12\")",
+  selectInput('tx_mo12_ss', 'Month 12 Sexual Satisfaction',
+              c(NA,'1'=1,'2'=2,'3'=3,'4'=4,'5'=5), selected=NA),
+  numericInput('tx_mo12_sds', 'Month 12 Sexual Domain Score',
+               min=0, max=100, value=NA)
+)
 
 ####
 ```
@@ -123,7 +171,17 @@ ggfind = reactive({
   gg
 })
 
-prediction_score <- reactive({
+# this function gets all the dynamic categories the user
+# selected and inserts a "|" in between (except for the last one)
+getdycat <- reactive({
+  dc = input$tx_gdycat
+  dc_piped=""
+  if (is.null(input$tx_gdycat)) { dc_piped="none_of_the_above" } 
+  else { dc_piped = glue_collapse(dc, sep="|") }
+  dc_piped
+})
+
+createDF <- reactive({
   
   age=as.integer(input$tx_age)
   bmi=as.integer(input$tx_bmi)
@@ -131,8 +189,8 @@ prediction_score <- reactive({
   glandvol = as.integer(input$tx_glandvol)
   psa = as.integer(input$tx_psa)
   gleason_grade = ggfind()
-  dynamic_category = input$tx_dycat
-  outcome_time = input$tx_outcome_time
+  dynamic_category = getdycat()
+  outcome_time = "mo12"
   baseline_sexual_satisfaction = as.integer(input$tx_baseline_ss)
   baseline_epic_sexualdomainscore = as.integer(input$tx_baseline_sds)
   mo3_sexual_satisfaction= as.integer(input$tx_mo3_ss)
@@ -141,37 +199,83 @@ prediction_score <- reactive({
   mo6_epic_sexualdomainscore = as.integer(input$tx_mo6_sds)
   mo12_sexual_satisfaction=as.integer(input$tx_mo12_ss)
   mo12_epic_sexualdomainscore=as.integer(input$tx_mo12_sds)
-  epic_sexualdomainscore=as.integer(input$tx_epic_ss)
+
+  df_usrinput = data.frame(age,
+                           bmi,
+                           diabetes,
+                           glandvol,
+                           psa,
+                           gleason_grade,
+                           dynamic_category,
+                           outcome_time,
+                           baseline_sexual_satisfaction,
+                           baseline_epic_sexualdomainscore,
+                           mo3_sexual_satisfaction,
+                           mo3_epic_sexualdomainscore,
+                           mo6_sexual_satisfaction,
+                           mo6_epic_sexualdomainscore,
+                           mo12_sexual_satisfaction,
+                           mo12_epic_sexualdomainscore
+                           )
   
-  x = data.frame(age,
-                 bmi,
-                 diabetes,
-                 glandvol,
-                 psa,
-                 gleason_grade,
-                 dynamic_category,
-                 outcome_time,
-                 baseline_sexual_satisfaction,
-                 baseline_epic_sexualdomainscore,
-                 mo3_sexual_satisfaction,
-                 mo3_epic_sexualdomainscore,
-                 mo6_sexual_satisfaction,
-                 mo6_epic_sexualdomainscore,
-                 mo12_sexual_satisfaction,
-                 mo12_epic_sexualdomainscore,
-                 epic_sexualdomainscore)
-  
+  df_usrinput
+})
+
+
+### MONTH 12
+observe({
+  result=input$tx_gdycat
+  # if they entered month 12, then there's no point in showing output
+  if (is.element("mo12", result)) {
+    output$mo12_sds <- renderText({ "\"come on, you already know this :)\"" })
+    output$mo12_eqs <- renderText({ "\"come on, you already know this :)\"" })
+  }
+  else {
+    output$mo12_sds <- renderText({ 
+      x = createDF()
+      x$outcome_time="mo12"
+      pred_isof <- h2o.mojo_predict_df(frame=x, 
+                                       mojo_zip_path='h2o_rf_epic_sexualdomainscore.zip',
+                                       genmodel_jar_path='h2o-genmodel.jar',
+                                       verbose = F)
+      score = as.vector(pred_isof$predict)  
+      paste(score)
+    })
+    
+    output$mo12_eqs <- renderText({ 
+      x = createDF()
+      x$outcome_time="mo12"
+      pred_isof <- h2o.mojo_predict_df(frame=x, 
+                                       mojo_zip_path='h2o_rf_outcome_erection_quality_high.zip',
+                                       genmodel_jar_path='h2o-genmodel.jar',
+                                       verbose = F)
+      score = as.vector(pred_isof$Yes)  
+      paste(score)
+    })
+  }
+})
+
+### MONTH 24
+output$mo24_sds <- renderText({ 
+  x = createDF()
+  x$outcome_time="mo24"
   pred_isof <- h2o.mojo_predict_df(frame=x, 
                                    mojo_zip_path='h2o_rf_epic_sexualdomainscore.zip',
                                    genmodel_jar_path='h2o-genmodel.jar',
                                    verbose = F)
-  score = as.vector(pred_isof$predict)
-  score
+  score = as.vector(pred_isof$predict)  
+  paste(score)
 })
 
-output$pred_score = renderText({
-  result = prediction_score()
-  paste(result)
+output$mo24_eqs <- renderText({ 
+  x = createDF()
+  x$outcome_time="mo24"
+  pred_isof <- h2o.mojo_predict_df(frame=x, 
+                                   mojo_zip_path='h2o_rf_outcome_erection_quality_high.zip',
+                                   genmodel_jar_path='h2o-genmodel.jar',
+                                   verbose = F)
+  score = as.vector(pred_isof$Yes)  
+  paste(score)
 })
 
 
