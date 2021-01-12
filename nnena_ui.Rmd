@@ -1,7 +1,7 @@
 ---
-title: "nnena_ui"
+title: "Nnena UI"
 author: "Jake Huang"
-date: "12/20/2020"
+date: "01/12/2021"
 output: html_document
 runtime: shiny
 ---
@@ -92,10 +92,6 @@ conditionalPanel('input.tx_start>0 && !input.tx_gdycat.includes(\"mo12\")',
                    h5(htmlOutput('mo12_sds')),
                    h3('Month 12 Erection Quality Score: '),
                    h5(htmlOutput('mo12_eqs'))
-                   # h3('Month 24 Epic Sexual Domain Score: '),
-                   # h5(htmlOutput('mo24_sds')),
-                   # h3('Month 24 Erection Quality Score: '),
-                   # h5(htmlOutput('mo24_eqs'))
                    ))
 
 conditionalPanel('input.tx_start>0',
@@ -105,43 +101,6 @@ conditionalPanel('input.tx_start>0',
                    h3('Month 24 Erection Quality Score: '),
                    h5(htmlOutput('mo24_eqs'))
                    ))
-
-# # BASELINE
-# conditionalPanel(
-#   condition = "input.tx_gdycat.includes(\"baseline\")",
-#   selectInput('tx_baseline_ss', 'Baseline Sexual Satisfaction',
-#               c(NA,'1'=1,'2'=2,'3'=3,'4'=4,'5'=5), selected=NA),
-#   numericInput('tx_baseline_sds', 'Baseline Sexual Domain Score',
-#                min=0, max=100, value=NA)
-# )
-# 
-# # MONTH 3
-# conditionalPanel(
-#   condition = "input.tx_gdycat.includes(\"mo3\")",
-#   selectInput('tx_mo3_ss', 'Month 3 Sexual Satisfaction',
-#               c(NA,'1'=1,'2'=2,'3'=3,'4'=4,'5'=5), selected=NA),
-#   numericInput('tx_mo3_sds', 'Month 3 Sexual Domain Score',
-#                min=0, max=100, value=NA)
-# )
-# 
-# # MONTH 6
-# conditionalPanel(
-#   condition = "input.tx_gdycat.includes(\"mo6\")",
-#   selectInput('tx_mo6_ss', 'Month 6 Sexual Satisfaction',
-#               c(NA,'1'=1,'2'=2,'3'=3,'4'=4,'5'=5), selected=NA),
-#   numericInput('tx_mo6_sds', 'Month 6 Sexual Domain Score',
-#                min=0, max=100, value=NA)
-# )
-# 
-# # MONTH 12
-# conditionalPanel(
-#   condition = "input.tx_gdycat.includes(\"mo12\")",
-#   selectInput('tx_mo12_ss', 'Month 12 Sexual Satisfaction',
-#               c(NA,'1'=1,'2'=2,'3'=3,'4'=4,'5'=5), selected=NA),
-#   numericInput('tx_mo12_sds', 'Month 12 Sexual Domain Score',
-#                min=0, max=100, value=NA)
-# )
-
 ####
 ```
 
@@ -216,19 +175,6 @@ createDF <- reactive({
 
 
 ### MONTH 12
-# observe({
-#   result=input$tx_gdycat
-#   # if they entered month 12, then there's no point in showing output
-#   if (is.element("mo12", result)) {
-#     output$mo12_sds <- renderText({ "\"come on, you already know this :)\"" })
-#     output$mo12_eqs <- renderText({ "\"come on, you already know this :)\"" })
-#   }
-#   else {
-# 
-#   }
-# })
-
-
 output$mo12_sds <- renderText({ 
   x = createDF()
   x$outcome_time="mo12"
